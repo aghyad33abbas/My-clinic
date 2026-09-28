@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0d3b66">
+<meta name="description" content="نظام إدارة عيادة طبية - د. أغيد أحمد عباس">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="عيادتي">
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
+<title>عيادتي | د. أغيد أحمد عباس</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="icon" href="./icon-192.png">
+<link rel="stylesheet" href="./css/styles.css">
+<link rel="stylesheet" href="./css/lab-tests.css">
+</head>
+<body>
+
+<div class="offline-banner" id="offlineBanner" role="status" aria-live="polite">
+    📱 أنت تعمل حالياً بدون اتصال - البيانات محفوظة محلياً
+</div>
+<div class="storage-fallback-banner" id="storageFallbackBanner" role="alert">
+    ⚠️ التخزين المحلي فقط (IndexedDB غير متاح). يُنصح باستخدام متصفح حديث.
+</div>
+<div class="error-banner" id="errorBanner" role="alert" aria-live="assertive">
+    <span id="errorMessage"></span>
+    <button class="error-close" id="errorCloseBtn" aria-label="إغلاق التنبيه" type="button">✖</button>
+</div>
+
+<div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="false"></div>
+
+<div class="install-prompt" id="installPrompt" role="dialog" aria-label="تثبيت التطبيق">
+    <span>📲 <strong>ثبّت التطبيق</strong> على جهازك للاستخدام السريع بدون إنترنت</span>
+    <div class="install-actions">
+        <button class="btn-sm" id="installAcceptBtn" type="button">تثبيت</button>
+        <button class="btn-sm btn-outline" id="installDismissBtn" type="button">لاحقاً</button>
+    </div>
+</div>
+
+<header class="topbar">
+    <div class="brand">🏥 عيادتي<span> – د. أغيد أحمد عباس</span></div>
+    <div class="topbar-actions">
+        <span class="badge-status" id="connectionStatus">📱 يعمل بدون إنترنت</span>
+    </div>
+</header>
+
+<div class="app-container">
+    <nav class="sidebar" id="sidebar" aria-label="التنقل الرئيسي">
+        <div class="nav-group">📋 العمليات اليومية</div>
+        <button class="active" data-page="visit" aria-current="page" type="button">📝 زيارة ومواعيد</button>
+        <button data-page="patients" type="button">📋 سجل المرضى</button>
+        <button data-page="appointments" type="button">📮 المواعيد والمراجعات</button>
+        <div class="nav-group">💊 الأدوية والتحاليل</div>
+        <button data-page="medications" type="button">💊 قاعدة الأدوية</button>
+        <button data-page="lab-tests" type="button">🧪 قاعدة التحاليل</button>
+        <div class="nav-group">📁 البيانات والنسخ الاحتياطي</div>
+        <button data-page="backup" type="button">📁 تصدير واستيراد</button>
+        <button data-page="backup-advanced" type="button">📡 نسخ احتياطي متقدم</button>
+        <button data-page="audit-log" type="button">📋 سجل التدقيق</button>
+        <div class="nav-group">⚙️ الأمان</div>
+        <button data-page="security" type="button">🔐 الأمان والخصوصية</button>
+    </nav>
+
+    <main class="main-content" id="mainContent">
+
+    <section class="page-section active" id="page-visit" aria-label="زيارة ومواعيد">
+        <h2>📝 زيارة ومواعيد</h2>
+        <div class="tabs" id="visitTabs" role="tablist">
+            <button class="active" data-visittab="newVisit" role="tab" aria-selected="true" type="button">📝 زيارة جديدة</button>
+            <button data-visittab="newAppointment" role="tab" aria-selected="false" type="button">📮 موعد سريع</button>
+        </div>
+
+        <div id="visitTab-newVisit" class="tab-content" role="tabpanel">
+            <div class="unsaved-banner" id="unsavedChangesBanner" role="status" aria-live="polite">⚠️ هناك تغييرات غير محفوظة</div>
+
+            <div id="editBanner" class="warning-box hidden">
+                ✏️ تعديل بيانات: <strong id="editBannerName"></strong>
+                <button class="btn-sm btn-outline" id="cancelEditBtn" type="button">إلغاء</button>
+            </div>
+
+            <div class="card">
+                <label for="visitType">نوع الزيارة *</label>
+                <select id="visitType" aria-required="true">
+                    <option value="">-- اختر --</option>
+                    <option value="new">🆕 مريض جديد</option>
+                    <option value="existing">📋 مريض سابق</option>
+                </select>
+            </div>
+
+            <div id="searchSection" class="card hidden">
+                <div class="section-title">🔍 البحث عن مريض</div>
+                <div class="search-box">
+                    <input type="text" id="patientSearch" placeholder="ابحث بالاسم أو رقم الملف أو الهاتف..." autocomplete="off" aria-label="البحث عن مريض" role="combobox" aria-expanded="false" aria-autocomplete="list">
+                    <div class="search-results" id="searchResults" role="listbox"></div>
+                </div>
+                <div id="selectedPatientCard" class="success-box hidden" aria-live="polite"></div>
+                <div id="selectedPatientActions" class="actions-row hidden">
+                    <button class="btn-sm btn-outline" id="editSelectedPatientBtn" type="button">✏️ تعديل بيانات هذا المريض</button>
+                </div>
+            </div>
+
+            <div id="newPatientSection" class="card hidden">
+                <div class="section-title">🆕 معلومات المريض</div>
+                <div class="grid-2">
+                    <div><label for="pName">الاسم الكامل *</label><input id="pName" aria-required="true"></div>
+                    <div><label for="pAge">العمر</label><input type="number" id="pAge" min="0" max="120" inputmode="numeric"></div>
+                    <div><label for="pGender">الجنس</label><select id="pGender"><option>ذكر</option><option>أنثى</option></select></div>
+                    <div><label for="pPhone">الهاتف</label><input id="pPhone" type="tel" inputmode="tel"></div>
+                    <div><label for="pAddress">العنوان</label><input id="pAddress"></div>
+                    <div><label for="pClinic">العيادة *</label><select id="pClinic"><option>القصير</option><option>العقربية</option><option>حمص</option><option>شين</option><option>أخرى</option></select></div>
+                    <div><label for="pStatus">الحالة</label><select id="pStatus"><option>مستقر</option><option>يحتاج متابعة</option><option>حالة حرجة</option></select></div>
+                </div>
+                <label for="pChronic">الأمراض المزمنة</label><textarea id="pChronic" rows="2"></textarea>
+                <label for="pSurgical">السوابق الجراحية</label><textarea id="pSurgical" rows="2"></textarea>
+                <label>السوابق الدوائية</label>
+                <div class="input-group">
+                    <div class="search-box search-input-flex">
+                        <input type="text" id="pMedHistorySearch" placeholder="🔍 ابحث عن دواء أو اكتب اسم..." autocomplete="off">
+                        <div class="search-results" id="pMedHistorySearchResults"></div>
+                    </div>
+                    <button class="btn-sm" id="addMedToHistoryBtn" type="button">➕ إضافة</button>
+                </div>
+                <div class="med-history-list" id="pMedHistoryList"></div>
+                <label for="pAllergy">حساسية دوائية</label><textarea id="pAllergy" rows="2"></textarea>
+                <label>عوامل الخطر القلبية الوعائية</label>
+                <div class="cv-risk-chips" id="cvRiskChips">
+                    <span class="cv-risk-chip" data-risk="ضغط" role="checkbox" aria-checked="false" tabindex="0">ضغط</span>
+                    <span class="cv-risk-chip" data-risk="سكري" role="checkbox" aria-checked="false" tabindex="0">سكري</span>
+                    <span class="cv-risk-chip" data-risk="عمر (ذكر > 45، أنثى > 55)" role="checkbox" aria-checked="false" tabindex="0">عمر</span>
+                    <span class="cv-risk-chip" data-risk="كحول" role="checkbox" aria-checked="false" tabindex="0">كحول</span>
+                    <span class="cv-risk-chip" data-risk="تدخين (موقف منذ أقل من 3 أشهر)" role="checkbox" aria-checked="false" tabindex="0">تدخين</span>
+                    <span class="cv-risk-chip" data-risk="بدانة" role="checkbox" aria-checked="false" tabindex="0">بدانة</span>
+                    <span class="cv-risk-chip" data-risk="قصة عائلية" role="checkbox" aria-checked="false" tabindex="0">قصة عائلية</span>
+                    <span class="cv-risk-chip" data-risk="سوابق أمراض وعائية" role="checkbox" aria-checked="false" tabindex="0">سوابق وعائية</span>
+                    <span class="cv-risk-chip" data-risk="اضطراب كولسترول الدم" role="checkbox" aria-checked="false" tabindex="0">كولسترول</span>
+                    <span class="cv-risk-chip" data-risk="اضطراب شحوم الدم" role="checkbox" aria-checked="false" tabindex="0">شحوم الدم</span>
+                </div>
+                <input type="hidden" id="pCvRisks" value="">
+                <div class="actions-row mt-14">
+                    <button class="btn" id="btnSavePatientOnly" type="button">📁 حفظ</button>
+                    <button class="btn btn-success" id="btnStartVisit" type="button" disabled>▶️ بدء الزيارة</button>
+                    <button class="btn btn-outline hidden" id="btnUpdatePatient" type="button">✏️ تحديث</button>
+                </div>
+                <div class="actions-row mt-8">
+                    <button class="btn btn-outline hidden" id="btnSharePatient" type="button">📤 مشاركة</button>
+                </div>
+                <div id="patientMsg" class="msg" role="status" aria-live="polite"></div>
+            </div>
+
+            <div id="visitDetailsSection" class="card hidden">
+                <div class="section-title">📋 تفاصيل الزيارة</div>
+                <div class="grid-2">
+                    <div><label for="vBP">ضغط الدم</label><input id="vBP" placeholder="120/80" inputmode="text" autocomplete="off"></div>
+                    <div><label for="vPulse">النبض</label><input type="number" id="vPulse" min="0" inputmode="numeric"></div>
+                    <div><label for="vSpO2">SpO₂ %</label><input type="number" id="vSpO2" min="0" max="100" inputmode="numeric"></div>
+                    <div><label for="vTemp">الحرارة °C</label><input type="number" id="vTemp" step="0.1" inputmode="decimal"></div>
+                    <div><label for="vWeight">الوزن كغ</label><input type="number" id="vWeight" step="0.1" inputmode="decimal"></div>
+                    <div><label for="vDate">تاريخ الزيارة</label><input type="date" id="vDate"></div>
+                </div>
+                <label for="vDiag">التشخيص *</label><textarea id="vDiag" aria-required="true"></textarea>
+                <label for="vNotes">ملاحظات</label><textarea id="vNotes"></textarea>
+
+                <div class="section-title">💊 الأدوية الموصوفة</div>
+                <div class="input-group">
+                    <div class="search-box search-input-flex">
+                        <input type="text" id="medSearchInput" placeholder="🔍 ابحث عن دواء أو اكتب اسم جديد..." autocomplete="off">
+                        <div class="search-results" id="medSearchResults"></div>
+                    </div>
+                    <button class="btn-sm" id="addMedToPrescriptionBtn" type="button">➕ إضافة</button>
+                </div>
+                <div class="grid-3 hidden mt-8" id="medDoseFields">
+                    <div><label for="medDose">الجرعة</label><input id="medDose" placeholder="مثال: 500mg"></div>
+                    <div><label for="medFrequency">التكرار</label><input id="medFrequency" placeholder="مثال: مرتين يومياً"></div>
+                    <div><label for="medDuration">المدة</label><input id="medDuration" placeholder="مثال: 7 أيام"></div>
+                </div>
+                <div class="prescription-list" id="prescriptionListContainer"></div>
+
+                <div class="file-upload-options mt-12">
+                    <button class="file-upload-btn" id="uploadFromGalleryBtn" type="button">🖼️ رفع من المعرض</button>
+                    <button class="file-upload-btn" id="captureFromCameraBtn" type="button">📸 التقاط صورة</button>
+                    <input type="file" id="vImages" accept="image/*" multiple class="visually-hidden">
+                    <input type="file" id="vCamera" accept="image/*" capture="environment" class="visually-hidden">
+                </div>
+                <div class="image-grid" id="visitImagesGrid"></div>
+                <div id="imageProgress" class="progress-bar hidden"><div class="progress-bar-fill"></div></div>
+
+                <div class="highlight-box mt-14">
+                    <label class="primary-label">📮 موعد المراجعة القادمة</label>
+                    <div class="grid-2">
+                        <div><input type="date" id="vNextDate" aria-label="تاريخ المراجعة"></div>
+                        <div><input type="time" id="vNextTime" value="10:00" aria-label="وقت المراجعة"></div>
+                    </div>
+                </div>
+                <button class="btn mt-14" id="saveVisitBtn" type="button">📁 حفظ الزيارة</button>
+                <div id="visitMsg" class="msg" role="status" aria-live="polite"></div>
+                <div id="visitSuccessActions" class="actions-row hidden"></div>
+            </div>
+        </div>
+
+        <div id="visitTab-newAppointment" class="tab-content hidden" role="tabpanel">
+            <div class="card dashed-card">
+                <h3>📝 إضافة موعد سريع</h3>
+                <div class="info-box">📋 يُضاف للتقويم فقط دون إنشاء ملف مريض.</div>
+                <div class="grid-2">
+                    <div><label for="quickAppName">اسم المريض *</label><input id="quickAppName" aria-required="true"></div>
+                    <div><label for="quickAppAge">العمر</label><input type="number" id="quickAppAge" min="0" max="120" inputmode="numeric"></div>
+                    <div><label for="quickAppPhone">الهاتف</label><input id="quickAppPhone" type="tel" inputmode="tel"></div>
+                    <div><label for="quickAppClinic">العيادة</label><select id="quickAppClinic"><option>القصير</option><option>العقربية</option><option>حمص</option><option>شين</option><option>أخرى</option></select></div>
+                    <div><label for="quickAppDate">التاريخ *</label><input type="date" id="quickAppDate" aria-required="true"></div>
+                    <div><label for="quickAppTime">الوقت *</label><input type="time" id="quickAppTime" value="10:00" aria-required="true"></div>
+                    <div class="grid-full"><label for="quickAppReason">سبب الزيارة</label><input id="quickAppReason"></div>
+                </div>
+                <button class="btn btn-warning mt-12" id="addQuickAppointmentBtn" type="button">📝 إضافة موعد سريع</button>
+                <div id="quickAppMsg" class="msg" role="status" aria-live="polite"></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="page-section" id="page-patients" aria-label="سجل المرضى">
+        <h2>📋 سجل المرضى</h2>
+        <div class="card">
+            <div class="input-group">
+                <input id="patientsSearch" placeholder="🔍 بحث بالاسم، رقم الملف، الهاتف..." class="search-input-flex" aria-label="بحث المرضى">
+                <select id="patientsStatusFilter" class="w-140" aria-label="تصفية الحالة">
+                    <option value="all">كل الحالات</option>
+                    <option>حالة حرجة</option>
+                    <option>يحتاج متابعة</option>
+                    <option>مستقر</option>
+                </select>
+                <select id="patientsClinicFilter" class="w-120" aria-label="تصفية العيادة">
+                    <option value="all">كل العيادات</option>
+                    <option>القصير</option>
+                    <option>العقربية</option>
+                    <option>حمص</option>
+                    <option>شين</option>
+                    <option>أخرى</option>
+                </select>
+            </div>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr>
+                    <th>الملف</th><th>الاسم</th><th>العمر</th><th>الهاتف</th>
+                    <th>العيادة</th><th>الحالة</th><th>آخر زيارة</th><th>إجراءات</th>
+                </tr></thead>
+                <tbody id="patientsTableBody"><tr><td colspan="8" class="text-center">جاري التحميل...</td></tr></tbody>
+            </table>
+        </div>
+        <div class="pagination" id="patientsPagination"></div>
+        <div class="patients-count" id="patientsCount"></div>
+    </section>
+
+    <section class="page-section" id="page-patientFile" aria-label="ملف المريض">
+        <button class="btn-sm btn-outline mb-14" id="backToPatientsBtn" type="button">⬅️ العودة لسجل المرضى</button>
+        <div class="card" id="patientFileHeader"></div>
+        <div class="card mt-14" id="patientMedicalInfo"></div>
+
+        <div class="card mt-14 lab-tests-card" id="patientLabTestsCard">
+            <div class="lab-tests-header">
+                <div class="section-title no-border">🧪 التحاليل</div>
+                <button class="btn-sm" id="toggleLabTestFormBtn" type="button">➕ إضافة تحليل</button>
+            </div>
+
+            <div class="lab-quick-chips" id="labQuickChips"></div>
+
+            <div class="lab-entry-form hidden" id="patientLabTestEntry">
+                <div class="lab-form-row">
+                    <div class="lab-field lab-field-name">
+                        <label for="patientLabTestSearch">اسم التحليل *</label>
+                        <div class="search-box">
+                            <input type="text" id="patientLabTestSearch"
+                                   placeholder="🔍 ابحث أو اكتب اسماً جديداً..."
+                                   autocomplete="off">
+                            <div class="search-results" id="patientLabTestSearchResults"></div>
+                        </div>
+                    </div>
+                    <div class="lab-field lab-field-result">
+                        <label for="patientLabTestResult">النتيجة</label>
+                        <input id="patientLabTestResult" placeholder="مثال: 105 mg/dL">
+                    </div>
+                    <div class="lab-field lab-field-date">
+                        <label for="patientLabTestDate">التاريخ *</label>
+                        <input type="date" id="patientLabTestDate">
+                    </div>
+                </div>
+
+                <div class="lab-result-chips" id="labResultChips">
+                    <span class="lab-result-chip" data-value="طبيعي" tabindex="0">✓ طبيعي</span>
+                    <span class="lab-result-chip" data-value="مرتفع" tabindex="0">↑ مرتفع</span>
+                    <span class="lab-result-chip" data-value="منخفض" tabindex="0">↓ منخفض</span>
+                    <span class="lab-result-chip" data-value="حدي" tabindex="0">± حدي</span>
+                    <span class="lab-result-chip" data-value="سلبي" tabindex="0">⊘ سلبي</span>
+                    <span class="lab-result-chip" data-value="إيجابي" tabindex="0">⊕ إيجابي</span>
+                </div>
+
+                <div class="lab-field mt-8">
+                    <label for="patientLabTestNotes">ملاحظات <span class="optional-hint">(اختياري)</span></label>
+                    <input id="patientLabTestNotes" placeholder="ملاحظات إضافية...">
+                </div>
+
+                <div class="lab-form-actions">
+                    <button class="btn btn-success" id="savePatientLabTestBtn" type="button">💾 حفظ التحليل</button>
+                    <button class="btn btn-outline" id="cancelPatientLabTestBtn" type="button">إلغاء</button>
+                </div>
+            </div>
+
+            <div class="lab-tests-list" id="patientLabTestsList"></div>
+        </div>
+
+        <div class="section-title">📋 الخط الزمني للزيارات</div>
+        <div class="timeline" id="patientTimeline"></div>
+        <div class="actions-row mt-14">
+            <button class="btn-sm btn-outline" id="editPatientFromFileBtn" type="button">✏️ تعديل بيانات المريض</button>
+            <button class="btn-sm btn-success" id="exportCurrentPatientBtn" type="button">📤 تصدير</button>
+            <button class="btn-sm btn-danger" id="deleteCurrentPatientBtn" type="button">🗑️ حذف المريض</button>
+        </div>
+    </section>
+
+    <section class="page-section" id="page-appointments" aria-label="المواعيد">
+        <h2>📮 المواعيد والمراجعات</h2>
+        <div class="calendar-container" id="calendarWidget"></div>
+        <div class="day-details" id="dayDetailsContainer">
+            <div class="empty-state"><p>📮 اختر يوماً من التقويم</p></div>
+        </div>
+    </section>
+
+    <section class="page-section" id="page-medications" aria-label="قاعدة الأدوية">
+        <h2>💊 قاعدة بيانات الأدوية</h2>
+        <div class="card">
+            <div class="input-group">
+                <input type="text" id="newMedName" placeholder="اسم الدواء الجديد..." class="search-input-flex" aria-label="اسم الدواء الجديد">
+                <button class="btn" id="addMedToDBBtn" type="button">➕ إضافة للقاعدة</button>
+            </div>
+            <div id="medicationsMsg" class="msg" role="status" aria-live="polite"></div>
+        </div>
+        <div class="card">
+            <h3>📋 الأدوية المسجلة</h3>
+            <div class="mb-8"><input type="text" id="medicationsFilter" placeholder="🔍 تصفية..." aria-label="تصفية الأدوية"></div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>اسم الدواء</th><th>تاريخ الإضافة</th><th>إجراءات</th></tr></thead>
+                    <tbody id="medicationsTableBody"><tr><td colspan="3" class="text-center">جاري التحميل...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section class="page-section" id="page-lab-tests" aria-label="قاعدة التحاليل">
+        <h2>🧪 قاعدة بيانات التحاليل</h2>
+        <div class="card">
+            <div class="input-group">
+                <input type="text" id="newLabTestName"
+                       placeholder="اسم التحليل الجديد..."
+                       class="search-input-flex" aria-label="اسم التحليل الجديد">
+                <button class="btn" id="addLabTestToDBBtn" type="button">➕ إضافة للقاعدة</button>
+            </div>
+            <div id="labTestsMsg" class="msg" role="status" aria-live="polite"></div>
+        </div>
+        <div class="card">
+            <h3>📋 التحاليل المسجلة</h3>
+            <div class="mb-8">
+                <input type="text" id="labTestsFilter" placeholder="🔍 تصفية..." aria-label="تصفية التحاليل">
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>اسم التحليل</th><th>تاريخ الإضافة</th><th>إجراءات</th></tr></thead>
+                    <tbody id="labTestsTableBody">
+                        <tr><td colspan="3" class="text-center">جاري التحميل...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section class="page-section" id="page-backup" aria-label="تصدير واستيراد">
+        <h2>📁 تصدير واستيراد البيانات</h2>
+        <div class="section-title">📤 تصدير</div>
+        <div class="card mb-16">
+            <div class="radio-group">
+                <label><input type="radio" name="exportType" value="all" checked> تصدير كل البيانات</label>
+                <label><input type="radio" name="exportType" value="monthly"> تصدير حسب الشهر</label>
+                <label><input type="radio" name="exportType" value="search"> تصدير نتائج البحث</label>
+            </div>
+            <div id="exportMonthlyOpt" class="hidden"><select id="exportMonth" class="w-full"><option value="">اختر شهراً</option></select></div>
+            <div id="exportSearchOpt" class="hidden">
+                <input type="text" id="exportSearchInput" placeholder="🔍 ابحث عن مريض للتصدير..." class="w-full mb-8">
+                <div id="exportSearchResults" class="multi-select-list"></div>
+                <div class="mt-8">
+                    <button class="btn-sm btn-outline" id="selectAllExportBtn" type="button">تحديد الكل</button>
+                    <button class="btn-sm btn-outline" id="deselectAllExportBtn" type="button">إلغاء الكل</button>
+                </div>
+            </div>
+            <button class="btn mt-10" id="executeExportBtn" type="button">📤 تصدير</button>
+        </div>
+        <div class="section-title">📨 استيراد</div>
+        <div class="card">
+            <button class="btn btn-outline" id="importBtn" type="button">📨 استيراد ملف JSON</button>
+            <input type="file" id="importFileInput" accept=".json,application/json" class="visually-hidden">
+        </div>
+        <div id="backupMsg" class="msg" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="page-section" id="page-backup-advanced" aria-label="نسخ احتياطي متقدم">
+        <h2>📡 نسخ احتياطي متقدم</h2>
+        <div class="card mb-16">
+            <h3>📤 حفظ نسخة احتياطية في مجلد</h3>
+            <p class="hint-text">يُستخدم File System Access API (مدعوم في Chrome و Edge).</p>
+            <button class="btn btn-success" id="saveToFolderBtn" type="button">📁 حفظ في مجلد...</button>
+            <div id="folderPathDisplay" class="folder-path"></div>
+            <button class="btn btn-sm btn-outline hidden mt-8" id="quickBackupToFolderBtn" type="button">🔄 نسخ احتياطي سريع</button>
+        </div>
+        <div class="card mb-16">
+            <h3>📡 رفع إلى Google Drive</h3>
+            <p class="hint-text">يتم تحميل ملف JSON يدوياً لرفعه إلى Drive.</p>
+            <div class="actions-row">
+                <button class="btn btn-google" id="downloadForDriveBtn" type="button">⬇️ تحميل للرفع</button>
+                <button class="btn btn-outline" id="openGoogleDriveBtn" type="button">📤 فتح Google Drive</button>
+            </div>
+        </div>
+        <div class="card mb-16">
+            <h3>📨 استيراد من ملف</h3>
+            <button class="btn btn-outline" id="importFromFileBtn" type="button">📨 استيراد من ملف JSON</button>
+            <input type="file" id="importAdvancedFileInput" accept=".json,application/json" class="visually-hidden">
+        </div>
+        <div class="card">
+            <h3>📢 النسخ الاحتياطي التلقائي</h3>
+            <p class="hint-text">آخر نسخة: <strong id="lastBackupDate">لم تتم بعد</strong></p>
+            <label><input type="checkbox" id="enableAutoBackupReminder"> تفعيل تذكير النسخ الاحتياطي (كل 3 أيام)</label>
+            <div id="autoBackupStatus" class="hint-small"></div>
+        </div>
+        <div class="card mt-14">
+            <h3>💾 مساحة التخزين</h3>
+            <p class="hint-text" id="storageUsageText">جاري الحساب...</p>
+            <div class="progress-bar progress-bar-lg"><div class="progress-bar-fill" id="storageUsageBar"></div></div>
+        </div>
+        <div id="advancedBackupMsg" class="msg" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="page-section" id="page-audit-log" aria-label="سجل التدقيق">
+        <h2>📋 سجل التدقيق</h2>
+        <div class="card mb-14">
+            <div class="input-group align-center">
+                <button class="btn-sm btn-outline" id="refreshAuditLogBtn" type="button">🔄 تحديث</button>
+                <button class="btn-sm btn-outline" id="exportAuditLogBtn" type="button">📤 تصدير السجل</button>
+                <button class="btn-sm btn-danger" id="clearAuditLogBtn" type="button">🗑️ مسح السجل</button>
+                <span class="audit-count" id="auditLogCount"></span>
+            </div>
+        </div>
+        <div class="audit-log-table table-wrap">
+            <table>
+                <thead><tr><th>التاريخ</th><th>الإجراء</th><th>التفاصيل</th><th>العنصر</th></tr></thead>
+                <tbody id="auditLogTableBody"><tr><td colspan="4" class="text-center">جاري التحميل...</td></tr></tbody>
+            </table>
+        </div>
+        <div id="auditLogMsg" class="msg" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="page-section" id="page-security" aria-label="الأمان">
+        <h2>🔐 الأمان والخصوصية</h2>
+
+        <div class="card">
+            <h3>💾 بيانات محلية بالكامل</h3>
+            <p class="hint-text">جميع البيانات تُحفظ على جهازك فقط (IndexedDB) ولا تُرفع لأي سيرفر.</p>
+        </div>
+
+        <div class="card">
+            <h3>📊 معلومات النظام</h3>
+            <div id="securityInfo" class="info-list"></div>
+        </div>
+
+        <div class="card">
+            <h3>⚠️ منطقة الخطر</h3>
+            <p class="hint-text">حذف كل البيانات نهائياً — لا يمكن التراجع.</p>
+            <button class="btn btn-danger" id="forgetAllDataBtn" type="button">🗑️ حذف كل البيانات وإعادة التعيين</button>
+        </div>
+
+        <div id="securityMsg" class="msg" role="status" aria-live="polite"></div>
+    </section>
+
+    </main>
+</div>
+
+<div id="imageViewer" class="image-viewer-overlay hidden" role="dialog" aria-modal="true" aria-label="عارض الصور">
+    <button class="image-viewer-close" id="closeImageViewerBtn" aria-label="إغلاق العارض" type="button">✖</button>
+    <button class="image-viewer-nav prev" id="prevImageBtn" aria-label="الصورة السابقة" type="button">◀</button>
+    <button class="image-viewer-nav next" id="nextImageBtn" aria-label="الصورة التالية" type="button">▶</button>
+    <img src="" alt="معاينة الصورة" id="viewerImage">
+    <div class="image-viewer-counter" id="viewerCounter"></div>
+</div>
+
+<div id="confirmModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="modal">
+        <h3 id="confirmTitle">تأكيد</h3>
+        <p id="confirmMessage"></p>
+        <div class="modal-actions">
+            <button class="btn btn-outline" id="confirmCancelBtn" type="button">إلغاء</button>
+            <button class="btn btn-danger" id="confirmBtn" type="button">موافق</button>
+        </div>
+    </div>
+</div>
+
+<div id="visitModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="visitModalTitle">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="visitModalTitle">تفاصيل الزيارة</h3>
+            <button class="btn-sm btn-outline" id="closeVisitModalBtn" type="button" aria-label="إغلاق">✖</button>
+        </div>
+        <div id="visitModalContent"></div>
+        <div id="visitModalMsg" class="msg" role="status" aria-live="polite"></div>
+    </div>
+</div>
+
+<div id="editPatientModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="editPatientModalTitle">
+    <div class="modal modal-lg">
+        <div class="modal-header">
+            <h3 id="editPatientModalTitle">✏️ تعديل بيانات المريض الكاملة</h3>
+            <button class="btn-sm btn-outline" id="closeEditPatientModalBtn" type="button" aria-label="إغلاق">✖</button>
+        </div>
+        <div id="editPatientModalContent"></div>
+        <div id="editPatientModalMsg" class="msg" role="status" aria-live="polite"></div>
+    </div>
+</div>
+
+<script src="./js/utils.js" defer></script>
+<script src="./js/db.js" defer></script>
+<script src="./js/ui-utils.js" defer></script>
+<script src="./js/patients.js" defer></script>
+<script src="./js/visits.js" defer></script>
+<script src="./js/calendar.js" defer></script>
+<script src="./js/medications.js" defer></script>
+<script src="./js/labTests.js" defer></script>
+<script src="./js/backup.js" defer></script>
+<script src="./js/app.js" defer></script>
+<script src="./js/tests.js" defer></script>
+</body>
+</html>

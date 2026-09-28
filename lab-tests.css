@@ -1,0 +1,231 @@
+/* ============================================================
+   lab-tests.css - تنسيقات قسم التحاليل المحسّن
+   ============================================================ */
+
+.lab-tests-card {
+    border: 1px solid var(--border);
+}
+
+.lab-tests-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.lab-tests-header .section-title,
+.section-title.no-border {
+    margin: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+    font-size: 16px;
+}
+
+/* أزرار سريعة */
+.lab-quick-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.lab-quick-chip {
+    padding: 6px 14px;
+    background: var(--primary-light);
+    color: var(--primary);
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: var(--transition);
+    user-select: none;
+    white-space: nowrap;
+}
+
+.lab-quick-chip:hover,
+.lab-quick-chip:focus-visible {
+    background: var(--primary);
+    color: #fff;
+    outline: none;
+}
+
+.lab-quick-chip:active {
+    transform: scale(0.95);
+}
+
+/* نموذج الإدخال */
+.lab-entry-form {
+    background: var(--primary-light);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 12px;
+    animation: labSlideDown 0.25s ease;
+}
+
+@keyframes labSlideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.lab-form-row {
+    display: grid;
+    grid-template-columns: 2fr 1.5fr 1fr;
+    gap: 10px;
+}
+
+@media (max-width: 700px) {
+    .lab-form-row { grid-template-columns: 1fr; }
+}
+
+.lab-field label {
+    margin-top: 0;
+    font-size: 12px;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.lab-field input {
+    padding: 9px 11px;
+    font-size: 13px;
+    background: var(--card);
+}
+
+.lab-field .search-box { position: relative; }
+
+/* ✅ إصلاح: نتائج البحث داخل نموذج التحاليل تبقى منسدلة طبيعية على الجوال */
+@media (max-width: 768px) {
+    .lab-field .search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        bottom: auto;
+        transform: none;
+        max-height: 220px;
+        z-index: 60;
+        border-radius: var(--radius-sm);
+    }
+}
+
+.optional-hint {
+    color: var(--sub);
+    font-weight: 400;
+    font-size: 11px;
+}
+
+/* اختصارات النتيجة */
+.lab-result-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.lab-result-chip {
+    padding: 5px 13px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    user-select: none;
+    color: var(--text);
+}
+
+.lab-result-chip:hover,
+.lab-result-chip:focus-visible {
+    border-color: var(--primary);
+    color: var(--primary);
+    outline: none;
+}
+
+.lab-result-chip.selected {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
+/* أزرار النموذج */
+.lab-form-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.lab-form-actions .btn {
+    padding: 9px 18px;
+    font-size: 13px;
+}
+
+/* قائمة التحاليل */
+.lab-test-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 11px 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 6px;
+    transition: var(--transition);
+}
+
+.lab-test-item:hover {
+    box-shadow: var(--shadow);
+    border-color: #cfd8e3;
+}
+
+.lab-test-info { flex: 1; min-width: 0; }
+
+.lab-test-name {
+    font-size: 14px;
+    margin-bottom: 4px;
+    color: var(--text);
+}
+
+.lab-test-date {
+    color: var(--sub);
+    font-size: 11px;
+    font-weight: 400;
+    margin-right: 6px;
+    background: var(--primary-light);
+    padding: 2px 8px;
+    border-radius: 8px;
+}
+
+.lab-test-result {
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 2px;
+}
+
+.lab-test-result strong { color: var(--primary); }
+
+.lab-test-details {
+    font-size: 12px;
+    color: var(--sub);
+    margin-top: 2px;
+}
+
+.lab-test-remove {
+    flex-shrink: 0;
+    align-self: center;
+}
+
+.empty-lab-state {
+    text-align: center;
+    padding: 22px 12px;
+    color: var(--sub);
+    font-size: 13px;
+    background: var(--primary-light);
+    border-radius: var(--radius-sm);
+    border: 1px dashed var(--border);
+}
